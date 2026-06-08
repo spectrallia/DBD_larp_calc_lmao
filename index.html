@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DBD Perk Build Cost Calculator - Limited Characters</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      max-width: 700px;
+      line-height: 1.5;
+      background-color: #f9f9f9;
+      color: #222;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    h1, h2 {
+      color: #2c3e50;
+      margin: 0;
+    }
+    section {
+      background: white;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    label.char-label {
+      display: block;
+      margin-bottom: 6px;
+    }
+    label.char-label span.price-info {
+      font-size: 0.9em;
+      color: #555;
+      margin-left: 8px;
+    }
+    #build-perks > div.character-perks {
+      margin-bottom: 20px;
+    }
+    #build-perks > div.character-perks h4 {
+      margin-bottom: 6px;
+      color: #34495e;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 3px;
+    }
+    #build-perks label {
+      margin-right: 10px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    #result {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #27ae60;
+    }
+    select.lang-select {
+      padding: 6px;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 data-i18n="title">DBD Perk Build Cost Calculator</h1>
+    <div>
+      <label for="lang" data-i18n="langLabel">Language:</label>
+      <select id="lang" class="lang-select" title="Choose language">
+        <option value="en">English</option>
+        <option value="pl">Polski</option>
+      </select>
+    </div>
+  </header>
+  
+  <button id="fun-button" style="
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: bold;
+  z-index: 9999;
+">jak było zrobione</button>
+
+
+  <section id="characters-section">
+    <h2 data-i18n="unlockedChars">Unlocked Characters</h2>
+    <div id="killers-list">
+      <h3 data-i18n="killers">Killers</h3>
+      <!-- Killer character checkboxes inserted here -->
+    </div>
+    <div id="survivors-list">
+      <h3 data-i18n="survivors">Survivors</h3>
+      <!-- Survivor character checkboxes inserted here -->
+    </div>
+  </section>
+
+  <section id="build-section">
+    <h2 data-i18n="build">Build</h2>
+    <form id="build-form" onsubmit="return false;">
+      <label data-i18n="select4">Select exactly 4 perks:</label>
+      <div id="build-perks"></div>
+
+      <button type="button" id="calculate-btn" data-i18n="calculateBtn">Oblicz / Calculate</button>
+    </form>
+    <div id="result"></div>
+  </section>
+
+<script>
+    document.getElementById('fun-button').addEventListener('click', () => {
+  window.open('https://www.youtube.com/watch?v=xMHJGd3wwZk', '_blank');
+});
+
+(() => {
+  // Translations for UI text and alerts
+  const i18n = {
+    en: {
+      title: "DBD Perk Build Cost Calculator",
+      langLabel: "Language:",
+      unlockedChars: "Unlocked Characters",
+      killers: "Killers",
+      survivors: "Survivors",
+      build: "Build",
+      select4: "Select exactly 4 perks:",
+      calculateBtn: "Calculate",
+      selectExactly4Alert: "Select exactly 4 perks for the build.",
+      allUnlocked: "All characters with selected perks are unlocked. Total cost is 0.",
+      resultPrefix: (count, ac, is) =>
+        `Total cost to buy ${count} locked character(s): ${ac} Auric Cells, ${is} Iridescent Shards.`,
+    },
+    pl: {
+      title: "Kalkulator kosztu buildów DBD",
+      langLabel: "Język:",
+      unlockedChars: "Odblokowane postacie",
+      killers: "Zabójcy",
+      survivors: "Ocalały",
+      build: "Build",
+      select4: "Wybierz dokładnie 4 perki:",
+      calculateBtn: "Oblicz",
+      selectExactly4Alert: "Wybierz dokładnie 4 perki dla builda.",
+      allUnlocked: "Wszystkie postacie z wybranymi perkami są odblokowane. Koszt całkowity to 0.",
+      resultPrefix: (count, ac, is) =>
+        `Całkowity koszt kupna ${count} zablokowanej/ych postaci: ${ac} Auric Cells, ${is} Iridescent Shards.`,
+    }
+  };
+
+  // Limited characters and their perks and prices
+  const characters = {
+    killers: [
+      {
+        name: "Ghoul",
+        perks: ["Forever Entwined", "Hex: Nothing But Misery", "None Are Free"],
+        ac: 500,
+        is: 0,
+      },
+      {
+        name: "Legion",
+        perks: ["Discordance", "Iron Maiden", "Mad Grit"],
+        ac: 250,
+        is: 4500,
+      },
+      {
+        name: "Unknown",
+        perks: ["Unforeseen", "Undone", "Unbound"],
+        ac: 500,
+        is: 9000,
+      },
+      {
+        name: "Skull Merchant",
+        perks: ["Game Afoot", "Leverage", "THWACK!"],
+        ac: 250,
+        is: 4500,
+      },
+    ],
+    survivors: [
+      {
+        name: "Jeff Johansen",
+        perks: ["Breakdown", "Aftercare", "Distortion"],
+        ac: 250,
+        is: 4500,
+      },
+      {
+        name: "Quentin Smith",
+        perks: ["Vigil", "WAKE UP!", "Pharmacy"],
+        ac: 500,
+        is: 0,
+      },
+      {
+        name: "Vittorio Toscano",
+        perks: ["Fogwise", "Quick Gambit", "Potential Energy"],
+        ac: 250,
+        is: 4500,
+      },
+      {
+        name: "Vee Boonyasak",
+        perks: ["Ghost Notes", "ONE-TWO-THREE-FOUR!", "Road Life"],
+        ac: 500,
+        is: 9000,
+      },
+    ],
+  };
+
+  // Track unlocked characters by type
+  let unlockedCharacters = {
+    killers: new Set(),
+    survivors: new Set(),
+  };
+
+  // Perks array: {name, character, ac, is}
+  let perks = [];
+
+  // Initialize perks from characters data
+  function initPerks() {
+    perks = [];
+    characters.killers.forEach((killer) => {
+      killer.perks.forEach((perkName) => {
+        perks.push({
+          name: perkName,
+          character: killer.name,
+          ac: killer.ac,
+          is: killer.is,
+          side: "killer",
+        });
+      });
+    });
+    characters.survivors.forEach((survivor) => {
+      survivor.perks.forEach((perkName) => {
+        perks.push({
+          name: perkName,
+          character: survivor.name,
+          ac: survivor.ac,
+          is: survivor.is,
+          side: "survivor",
+        });
+      });
+    });
+  }
+
+  // Render character checkboxes
+  function renderCharacters() {
+    const killersContainer = document.getElementById("killers-list");
+    const survivorsContainer = document.getElementById("survivors-list");
+
+    killersContainer.innerHTML = "";
+    survivorsContainer.innerHTML = "";
+
+    function createCharacterInput(type, char) {
+      const label = document.createElement("label");
+      label.className = "char-label";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = unlockedCharacters[type].has(char.name);
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          unlockedCharacters[type].add(char.name);
+        } else {
+          unlockedCharacters[type].delete(char.name);
+        }
+      });
+
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(" " + char.name));
+
+      const priceInfo = document.createElement("span");
+      priceInfo.className = "price-info";
+      priceInfo.textContent = `(Price: ${char.ac} AC${char.is ? " / " + char.is + " IS" : ""})`;
+      label.appendChild(priceInfo);
+
+      return label;
+    }
+
+    characters.killers.forEach((k) => {
+      killersContainer.appendChild(createCharacterInput("killers", k));
+    });
+
+    characters.survivors.forEach((s) => {
+      survivorsContainer.appendChild(createCharacterInput("survivors", s));
+    });
+  }
+
+  // Render build perks grouped by character
+  function renderBuildPerks() {
+    const container = document.getElementById("build-perks");
+    container.innerHTML = "";
+
+    // Helper to create perk checkbox label
+    function createPerkCheckbox(perk, index) {
+      const label = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.name = "build-perk";
+      cb.value = index;
+      cb.setAttribute("data-side", perk.side);
+      cb.setAttribute("data-character", perk.character);
+      cb.addEventListener("change", updateBuildPerkLockout);
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(` ${perk.name}`));
+      return label;
+    }
+
+    // Group perks by character for killers
+    characters.killers.forEach((killer) => {
+      const charDiv = document.createElement("div");
+      charDiv.className = "character-perks";
+      const heading = document.createElement("h4");
+      heading.textContent = killer.name;
+      charDiv.appendChild(heading);
+
+      killer.perks.forEach((perkName) => {
+        // Find perk index in perks array
+        const perkIndex = perks.findIndex(p => p.name === perkName && p.character === killer.name);
+        if (perkIndex !== -1) {
+          charDiv.appendChild(createPerkCheckbox(perks[perkIndex], perkIndex));
+        }
+      });
+
+      container.appendChild(charDiv);
+    });
+
+    // Group perks by character for survivors
+    characters.survivors.forEach((survivor) => {
+      const charDiv = document.createElement("div");
+      charDiv.className = "character-perks";
+      const heading = document.createElement("h4");
+      heading.textContent = survivor.name;
+      charDiv.appendChild(heading);
+
+      survivor.perks.forEach((perkName) => {
+        const perkIndex = perks.findIndex(p => p.name === perkName && p.character === survivor.name);
+        if (perkIndex !== -1) {
+          charDiv.appendChild(createPerkCheckbox(perks[perkIndex], perkIndex));
+        }
+      });
+
+      container.appendChild(charDiv);
+    });
+
+    updateBuildPerkLockout();
+  }
+
+  // Lockout perks from opposite side when one side is selected
+  function updateBuildPerkLockout() {
+    const boxes = document.querySelectorAll('input[name="build-perk"]');
+    const sides = new Set([...boxes].filter(b => b.checked).map(b => b.getAttribute('data-side')));
+    if (sides.size === 0) {
+      boxes.forEach(b => b.disabled = false);
+    } else if (sides.size === 1) {
+      const s = [...sides][0];
+      boxes.forEach(b => {
+        if (b.getAttribute('data-side') !== s) {
+          b.disabled = true;
+          b.checked = false;
+        } else {
+          b.disabled = false;
+        }
+      });
+    } else {
+      boxes.forEach(b => b.disabled = false);
+    }
+  }
+
+  // Calculate total cost counting each character once even if multiple perks from same char are picked
+  function calculateCostFromSelected(selectedIdxs) {
+    const uniqueCharacters = new Set(selectedIdxs.map(i => perks[i].character));
+    let acTotal = 0, isTotal = 0, counted = 0;
+    uniqueCharacters.forEach(name => {
+      let ch = characters.killers.find(c => c.name === name);
+      let type = 'killers';
+      if (!ch) {
+        ch = characters.survivors.find(c => c.name === name);
+        type = 'survivors';
+      }
+      if (!ch) return;
+      if (!unlockedCharacters[type].has(name)) {
+        acTotal += ch.ac;
+        isTotal += ch.is;
+        counted++;
+      }
+    });
+    return { acTotal, isTotal, counted };
+  }
+
+  // i18n helper: set UI strings to chosen language
+  function applyLanguage(lang) {
+    const dict = i18n[lang] || i18n.en;
+    document.querySelectorAll('[data-i18n]').forEach(el=>{
+      const key = el.getAttribute('data-i18n');
+      if (dict[key]) el.textContent = dict[key];
+    });
+    // button label separately
+    document.getElementById('calculate-btn').textContent = dict.calculateBtn;
+    // store
+    try { localStorage.setItem('dbd_lang', lang); } catch(e){}
+  }
+
+  // Initialization on DOM ready
+  document.addEventListener("DOMContentLoaded", () => {
+    // Initially no unlocked characters
+    unlockedCharacters.killers.clear();
+    unlockedCharacters.survivors.clear();
+
+    initPerks();
+    renderCharacters();
+    renderBuildPerks();
+
+    // Language setup: default from localStorage or browser
+    const savedLang = (() => { try { return localStorage.getItem('dbd_lang'); } catch(e) { return null; } })();
+    const defaultLang = savedLang || (navigator.language && navigator.language.startsWith('pl') ? 'pl' : 'en');
+    const langSelect = document.getElementById('lang');
+    langSelect.value = defaultLang;
+    applyLanguage(defaultLang);
+    langSelect.addEventListener('change', (e) => applyLanguage(e.target.value));
+
+    // Calculate button event
+    document.getElementById("calculate-btn").addEventListener("click", () => {
+      const lang = document.getElementById("lang").value || "en";
+      const dict = i18n[lang];
+      const checkedBoxes = document.querySelectorAll('input[name="build-perk"]:checked');
+      if (checkedBoxes.length !== 4) {
+        alert(dict.selectExactly4Alert);
+        return;
+      }
+      const selectedIndexes = Array.from(checkedBoxes).map(cb => Number(cb.value));
+      const cost = calculateCostFromSelected(selectedIndexes);
+      const resultDiv = document.getElementById("result");
+      if (cost.counted === 0) {
+        resultDiv.textContent = dict.allUnlocked;
+        return;
+      }
+      resultDiv.textContent = dict.resultPrefix(cost.counted, cost.acTotal, cost.isTotal);
+    });
+  });
+})();
+</script>
+</body>
+</html>
